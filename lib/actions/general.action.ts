@@ -2,6 +2,7 @@
 
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
+import { revalidatePath } from "next/cache";
 
 import { db } from "@/firebase/admin";
 import { feedbackSchema } from "@/constants";
@@ -90,17 +91,35 @@ export async function getFeedbackByInterviewId(
   return { id: feedbackDoc.id, ...feedbackDoc.data() } as Feedback;
 }
 
+export async function getUserFeedbacks(userId: string): Promise<string[]> {
+  try {
+    const snapshot = await db
+      .collection("feedback")
+      .where("userId", "==", userId)
+      .get();
+
+    return snapshot.docs.map((doc) => doc.data().interviewId as string);
+  } catch (error) {
+    console.error("Error fetching user feedbacks:", error);
+    return [];
+  }
+}
+
+export async function deleteInterview(interviewId: string) {
+  try {
+    await db.collection("interviews").doc(interviewId).delete();
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting interview:", error);
+    return { success: false, error: "Failed to delete interview" };
+  }
+}
+
 export async function getLatestInterviews(
   params: GetLatestInterviewsParams
 ): Promise<Interview[] | null> {
   const { userId, limit = 20 } = params;
-
-  // Firestore disallows certain compound queries without a composite
-  // index (for example mixing "!=" with orderBy). To avoid requiring
-  // a composite index we'll query finalized interviews ordered by
-  // createdAt (single-field index) and then filter out the current
-  // user's interviews server-side. This trades some extra reads for
-  // avoiding index creation.
 
   const fetchLimit = Math.max(limit * 3, 100);
 
@@ -122,10 +141,6 @@ export async function getLatestInterviews(
 export async function getInterviewsByUserId(
   userId: string
 ): Promise<Interview[] | null> {
-  // Avoid requiring a composite index by querying only on equality
-  // (userId) and then sorting the results in-memory by createdAt.
-  // This trades a small amount of client-side work for removing the
-  // need to create a composite index in Firestore.
   const snapshot = await db
     .collection("interviews")
     .where("userId", "==", userId)

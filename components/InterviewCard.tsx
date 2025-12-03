@@ -4,6 +4,7 @@ import Image from "next/image";
 
 import { Button } from "./ui/button";
 import DisplayTechIcons from "./DisplayTechIcons";
+import DeleteInterviewBtn from "./DeleteInterviewBtn";
 
 import { cn, getRandomInterviewCover } from "@/lib/utils";
 import { getFeedbackByInterviewId } from "@/lib/actions/general.action";
@@ -15,6 +16,7 @@ const InterviewCard = async ({
   type,
   techstack,
   createdAt,
+  allowDelete = false,
 }: InterviewCardProps) => {
   const feedback =
     userId && interviewId
@@ -38,8 +40,12 @@ const InterviewCard = async ({
   ).format("MMM D, YYYY");
 
   return (
-    <div className="card-border w-[360px] max-sm:w-full min-h-96 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+    <div className="card-border w-[360px] max-sm:w-full min-h-96 transition-all duration-300 hover:scale-105 hover:shadow-2xl relative group/card">
       <div className="card-interview">
+        {allowDelete && interviewId && (
+          <DeleteInterviewBtn interviewId={interviewId} />
+        )}
+
         <div>
           {/* Type Badge */}
           <div
@@ -77,10 +83,10 @@ const InterviewCard = async ({
             </div>
 
             <div className="flex flex-row gap-2 items-center transition-colors duration-200 hover:text-primary-200">
-              <Image 
-                src="/star.svg" 
-                width={22} 
-                height={22} 
+              <Image
+                src="/star.svg"
+                width={22}
+                height={22}
                 alt="star"
                 className="transition-transform hover:scale-110 hover:rotate-12"
               />

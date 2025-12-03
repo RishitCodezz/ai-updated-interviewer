@@ -9,6 +9,8 @@ import { vapi } from "@/lib/vapi.sdk";
 import { interviewer, personalAssistant } from "@/constants";
 import { createFeedback } from "@/lib/actions/general.action";
 import Avatar from "@/components/Avatar";
+import { toast } from "sonner";
+import CustomAlertDialog from "@/components/alertDialog";
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -39,10 +41,12 @@ const Agent = ({
   useEffect(() => {
     const onCallStart = () => {
       setCallStatus(CallStatus.ACTIVE);
+      toast.success("Call connected!");
     };
 
     const onCallEnd = () => {
       setCallStatus(CallStatus.FINISHED);
+      toast.success("Call ended.");
     };
 
     const onMessage = (message: Message) => {
@@ -62,21 +66,31 @@ const Agent = ({
       setIsSpeaking(false);
     };
 
-    const onError = (error: Error) => {
-      console.error("Vapi Error:", error);
+    const onError = (error: any) => {
+      console.error("Vapi Error:", JSON.stringify(error, null, 2)); // Stringify to see full error details
       setCallStatus(CallStatus.FINISHED);
-      
-      // Show user-friendly error message
-      const errorMessage = error?.message || "An error occurred during the call";
-      
+
+      // Safely extract error message from various possible properties
+      const errorMessage =
+        error?.message ||
+        error?.errorMsg ||
+        error?.msg ||
+        "An error occurred during the call";
+
       if (errorMessage.includes("ejection") || errorMessage.includes("ended")) {
-        console.log("Call was terminated");
-      } else if (errorMessage.includes("authentication") || errorMessage.includes("credentials")) {
-        console.log("Authentication error - check your API key");
-      } else if (errorMessage.includes("permission")) {
-        console.log("Microphone permission denied");
+        console.warn(
+          "Call ended by server (likely due to limits, billing, or timeout)."
+        );
+        toast.error("Call disconnected. Please check your Vapi usage limits.");
+      } else if (
+        errorMessage.includes("authentication") ||
+        errorMessage.includes("credentials")
+      ) {
+        console.error("Authentication error - check your API key");
+        toast.error("Authentication failed. Check API configuration.");
       } else {
-        console.log("Unexpected error:", errorMessage);
+        console.error("Unexpected error:", errorMessage);
+        toast.error(`Error: ${errorMessage}`);
       }
     };
 
@@ -122,12 +136,12 @@ const Agent = ({
 
     if (callStatus === CallStatus.FINISHED) {
       if (type === "generate") {
-        router.push("/");
+        router.push("/interview");
       } else if (type === "assistant") {
         // Save assistant conversation to Firestore
         const saveConversation = async () => {
           if (messages.length === 0) return;
-          
+
           try {
             const response = await fetch("/api/conversations", {
               method: "POST",
@@ -139,7 +153,7 @@ const Agent = ({
                 createdAt: new Date().toISOString(),
               }),
             });
-            
+
             if (response.ok) {
               console.log("Assistant conversation saved successfully");
             } else {
@@ -149,7 +163,7 @@ const Agent = ({
             console.error("Failed to save conversation:", error);
           }
         };
-        
+
         saveConversation();
       } else {
         handleGenerateFeedback(messages);
@@ -188,8 +202,11 @@ const Agent = ({
     } catch (error) {
       console.error("Failed to start call:", error);
       setCallStatus(CallStatus.INACTIVE);
-      
-      const errorMsg = error instanceof Error ? error.message : "Failed to start call. Please check your API key and try again.";
+
+      const errorMsg =
+        error instanceof Error
+          ? error.message
+          : "Failed to start call. Please check your API key and try again.";
       alert(`Error: ${errorMsg}`);
     }
   };
@@ -197,6 +214,7 @@ const Agent = ({
   const handleDisconnect = () => {
     setCallStatus(CallStatus.FINISHED);
     vapi.stop();
+    setMessages([]);
   };
 
   return (
@@ -227,7 +245,7 @@ const Agent = ({
       </div>
 
       {messages.length > 0 && (
-        <div className="transcript-border">
+        <div className="transcript-border mt-2">
           <div className="transcript">
             <p
               key={lastMessage}
@@ -242,7 +260,7 @@ const Agent = ({
         </div>
       )}
 
-      <div className="w-full flex justify-center">
+      <div className="w-full flex justify-center mt-3">
         {callStatus !== "ACTIVE" ? (
           <button className="relative btn-call" onClick={() => handleCall()}>
             <span
@@ -259,9 +277,9 @@ const Agent = ({
             </span>
           </button>
         ) : (
-          <button className="btn-disconnect" onClick={() => handleDisconnect()}>
-            End
-          </button>
+          <CustomAlertDialog handleDisconnect={handleDisconnect}>
+            <button className="btn-disconnect">End</button>
+          </CustomAlertDialog>
         )}
       </div>
     </>

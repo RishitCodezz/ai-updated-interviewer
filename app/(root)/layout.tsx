@@ -3,8 +3,10 @@ import Image from "next/image";
 import { ReactNode } from "react";
 import { redirect } from "next/navigation";
 
+
 import { getCurrentUser, isAuthenticated } from "@/lib/actions/auth.action";
 import Avatar from "@/components/Avatar";
+import SignOutButton from "@/components/SignOutBtn";
 
 const Layout = async ({ children }: { children: ReactNode }) => {
   const isUserAuthenticated = await isAuthenticated();
@@ -24,6 +26,7 @@ const Layout = async ({ children }: { children: ReactNode }) => {
           <div className="flex items-center gap-3">
             <span className="text-light-100 text-sm hidden sm:block">{user.name}</span>
             <Avatar name={user.name || "User"} size="md" />
+            <SignOutButton />
           </div>
         )}
       </nav>
