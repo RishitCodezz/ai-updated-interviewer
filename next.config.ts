@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Force fresh Vercel deployment
+  productionBrowserSourceMaps: false,
 };
 
 export default nextConfig;
