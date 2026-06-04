@@ -1,6 +1,6 @@
 "use server";
 
-import { auth, db } from "@/firebase/admin";
+import { getFirebaseServices } from "@/firebase/admin";
 import { cookies } from "next/headers";
 
 
@@ -10,6 +10,7 @@ const SESSION_DURATION = 60 * 60 * 24 * 7;
 
 // Set session cookie
 export async function setSessionCookie(idToken: string) {
+  const { auth } = getFirebaseServices();
   const cookieStore = await cookies();
 
   // Create session cookie
@@ -31,6 +32,7 @@ export async function signUp(params: SignUpParams) {
   const { uid, name, email } = params;
 
   try {
+    const { db } = getFirebaseServices();
     // check if user exists in db
     const userRecord = await db.collection("users").doc(uid).get();
     if (userRecord.exists)

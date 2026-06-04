@@ -4,13 +4,14 @@ import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { revalidatePath } from "next/cache";
 
-import { db } from "@/firebase/admin";
+import { getFirebaseServices } from "@/firebase/admin";
 import { feedbackSchema } from "@/constants";
 
 export async function createFeedback(params: CreateFeedbackParams) {
   const { interviewId, userId, transcript, feedbackId } = params;
 
   try {
+    const { db } = getFirebaseServices();
     const formattedTranscript = transcript
       .map(
         (sentence: { role: string; content: string }) =>

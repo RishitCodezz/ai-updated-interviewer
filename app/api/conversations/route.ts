@@ -1,7 +1,8 @@
-import { db } from "@/firebase/admin";
+import { getFirebaseServices } from "@/firebase/admin";
 
 export async function POST(request: Request) {
   try {
+    const { db } = getFirebaseServices();
     const { userId, transcript, type, createdAt } = await request.json();
 
     if (!userId || !transcript || transcript.length === 0) {
